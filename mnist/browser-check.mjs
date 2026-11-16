@@ -1,18 +1,24 @@
 import {spawn} from 'node:child_process';
 import {writeFileSync} from 'node:fs';
-const server=spawn('python',['-m','http.server','4182','--bind','127.0.0.1'],{cwd:process.cwd(),windowsHide:true,stdio:'ignore'});
-const browser=spawn('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',['--headless=new','--disable-gpu','--no-first-run','--remote-debugging-port=9242',`--user-data-dir=${process.cwd()}/.browser-mnist`,'about:blank'],{windowsHide:true,stdio:'ignore'});
+const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--port','4182','--hostname','127.0.0.1'],{cwd:process.cwd(),windowsHide:true,stdio:'ignore'});
+const browser=spawn('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',['--headless=new','--disable-gpu','--no-first-run','--remote-debugging-port=9242',`--user-data-dir=${process.cwd()}/.browser-mnist/${Date.now()}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
 const delay=ms=>new Promise(r=>setTimeout(r,ms));let ws;
 const timer=setTimeout(()=>{ws?.close();server.kill();browser.kill();process.exit(1);},55000);
 try{
  let tabs;for(let i=0;i<40;i++){try{tabs=await(await fetch('http://127.0.0.1:9242/json')).json();break;}catch{await delay(250);}}
  if(!tabs)throw Error('Browser unavailable');
  ws=new WebSocket(tabs.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});
- let id=0;const pending=new Map();ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
+ let id=0;const pending=new Map();ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')console.error(JSON.stringify(m.params));if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};
  const call=(method,params={})=>new Promise((resolve,reject)=>{const key=++id;pending.set(key,{resolve,reject});ws.send(JSON.stringify({id:key,method,params}));});
  const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
- await call('Network.enable');await call('Network.setBlockedURLs',{urls:['https://fonts.*']});
+ await call('Runtime.enable');await call('Network.enable');await call('Network.setBlockedURLs',{urls:['https://fonts.*']});
+ for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:4182/')).ok)break;}catch{}await delay(150);}
  const results=[];
+ await call('Page.navigate',{url:'http://127.0.0.1:4182/'});
+ for(let i=0;i<60;i++){if(await evaluate("!!document.querySelector('#search')"))break;await delay(100);}
+ for(let i=0;i<60;i++){if(await evaluate("!!document.querySelector('script[src=\"/wiki/main.js\"]')"))break;await delay(100);}
+ await delay(300);
+ if(!await evaluate("(()=>{const s=document.querySelector('#search');if(!s)return false;s.value='ENGINE';s.dispatchEvent(new Event('input'));const count=document.querySelectorAll('.topic-card:not([hidden])').length;return count>0&&count<12;})()"))throw Error('Existing homepage search failed');
  for(const width of [320,768,1440]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width===320});
   await call('Page.navigate',{url:'http://127.0.0.1:4182/mnist/'});

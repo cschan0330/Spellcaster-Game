@@ -4,7 +4,7 @@
 
 This project is an unofficial, single-page fan wiki for **My Summer Car**, a car-building and life-survival game set in the Finnish countryside. It helps new players plan their first day, organize a car build, and find short references for travel, supplies, and maintenance.
 
-The site uses plain JavaScript, HTML, and CSS with Vite for development and production builds. It has no backend or account system. Its guides are introductory references; they do not replace a complete assembly manual.
+The site uses plain JavaScript, HTML, and CSS with Next.js for development and production builds. The MNIST digit recognition page is available at `/mnist/`. It has no backend or account system. Its guides are introductory references; they do not replace a complete assembly manual.
 
 ### Main features
 
@@ -23,7 +23,7 @@ npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually `http://localhost:5173`.
+Open the Local URL printed by Next.js, usually `http://localhost:3000`. Visit `/mnist/` for digit recognition.
 
 To build and preview the production site:
 
@@ -32,7 +32,7 @@ npm run build
 npm run preview
 ```
 
-The production files are written to `dist/`.
+The production build is written to `.next/`; `npm run start` serves it. Vercel uses the Next.js preset declared in `vercel.json`. Set its Root Directory to the repository root, where `package.json` lives.
 
 ## Code explanation
 
@@ -43,10 +43,10 @@ The production files are written to `dist/`.
 | `src/content.js` | Stores the topic categories, guide text, checklist steps, build stages, and FAQ entries as arrays. |
 | `src/template.js` | Imports the content and exports the page markup as a template string. Shared helpers generate section headings and screenshot blocks. |
 | `render.mjs` | Writes `index.html`, combining the page markup with metadata, font links, and the browser script entry point. |
-| `index.html` | Generated HTML entry point served by Vite. |
+| `pages/index.jsx`, `pages/mnist.jsx` | Next.js routes for the wiki and digit recognition page. |
 | `src/main.js` | Imports the stylesheet and attaches event handlers to the generated HTML. |
 | `src/style.css` | Defines colors, typography, layouts, responsive breakpoints, focus styles, and reduced-motion behavior. |
-| `package.json` | Defines the Vite dependency and development, build, and preview commands. |
+| `package.json` | Defines Next.js, React, and development, build, and production server commands. |
 | `responsive-check.mjs` | Runs browser checks against `dist/` using a local Python server and headless Microsoft Edge. |
 | `ASSET-CREDITS.md` | Records image sources and asset notes. |
 | `VALIDATION.md`, `validation-results.json` | Document existing validation evidence and its limits. |
@@ -61,7 +61,7 @@ src/content.js -> src/template.js -> render.mjs -> index.html
                                               src/style.css
 ```
 
-Running `npm run dev` or `npm run build` automatically runs `render.mjs` first through the `predev` or `prebuild` npm hook. The renderer writes the guides and FAQ directly into the HTML. Vite then serves the page for development or bundles it into `dist/` for production. Browser JavaScript adds the interactive behavior after the HTML loads.
+Running `npm run dev` or `npm run build` first runs `scripts/prepare-assets.mjs`, which copies browser scripts, styles, and model weights into `public/`. Next.js renders the wiki template at `/` and the MNIST interface at `/mnist/`. Browser scripts attach after hydration. `render.mjs`, the root `index.html`, and the diagram above describe the retained legacy static renderer; they are not used by Next.js. The older `responsive-check.mjs` and validation files refer to the previous static build. Run `node mnist/browser-check.mjs` after `npm run build` for current production checks, including homepage search and MNIST interaction checks at three screen widths.
 
 ### Browser interactions
 

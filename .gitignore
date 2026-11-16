@@ -33,3 +33,6 @@ mnist/reference.json
 mnist/__pycache__/
 public/mnist/
 .browser-mnist/
+.next/
+out/
+public/wiki/

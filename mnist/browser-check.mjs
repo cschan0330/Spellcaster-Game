@@ -14,14 +14,13 @@ try{
  await call('Runtime.enable');await call('Network.enable');await call('Network.setBlockedURLs',{urls:['https://fonts.*']});
  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:4182/')).ok)break;}catch{}await delay(150);}
  const results=[];
- await call('Page.navigate',{url:'http://127.0.0.1:4182/'});
- for(let i=0;i<60;i++){if(await evaluate("!!document.querySelector('#search')"))break;await delay(100);}
- for(let i=0;i<60;i++){if(await evaluate("!!document.querySelector('script[src=\"/wiki/main.js\"]')"))break;await delay(100);}
- await delay(300);
- if(!await evaluate("(()=>{const s=document.querySelector('#search');if(!s)return false;s.value='ENGINE';s.dispatchEvent(new Event('input'));const count=document.querySelectorAll('.topic-card:not([hidden])').length;return count>0&&count<12;})()"))throw Error('Existing homepage search failed');
+ const root=await (await fetch('http://127.0.0.1:4182/')).text();
+ if(!root.includes('Digit Lab')||root.includes('My Summer Car'))throw Error('Root must serve only MNIST');
+ if((await fetch('http://127.0.0.1:4182/wiki/main.js')).status!==404)throw Error('Legacy assets still exposed');
+ if((await fetch('http://127.0.0.1:4182/mnist/',{redirect:'manual'})).status!==308)throw Error('Legacy MNIST route should redirect home');
  for(const width of [320,768,1440]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width===320});
-  await call('Page.navigate',{url:'http://127.0.0.1:4182/mnist/'});
+  await call('Page.navigate',{url:'http://127.0.0.1:4182/'});
   for(let i=0;i<100;i++){if(await evaluate("document.querySelector('#status')?.textContent.includes('Model ready')"))break;await delay(100);}
   const check=await evaluate(`(()=>({width:innerWidth,noOverflow:document.documentElement.scrollWidth<=innerWidth,modelReady:document.querySelector('#status').textContent.includes('Model ready'),rows:document.querySelectorAll('.prob-row').length,initialBlank:document.querySelector('#digit').textContent==='—'}))()`);
   await evaluate("document.querySelector('#recognize').click()");

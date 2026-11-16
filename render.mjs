@@ -1,7 +1,0 @@
-import { page } from './src/template.js';
-import { writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
-mkdirSync('public/mnist', { recursive: true });
-for (const file of ['index.html', 'style.css', 'app.js', 'network.js', 'weights.bin', 'model.json']) {
-  copyFileSync(`mnist/${file}`, `public/mnist/${file}`);
-}
-writeFileSync('index.html', `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f1e8"><title>My Summer Car Wiki — Your Finnish Garage Companion</title><meta name="description" content="Build your car. Survive the summer. An unofficial My Summer Car wiki with beginner checklists, build references, and survival advice."><meta property="og:title" content="My Summer Car — The Unofficial Fan Wiki"><meta property="og:description" content="Your garage companion for building, maintaining, and surviving."><meta property="og:type" content="website"><meta property="og:image" content="https://www.amistech.com/msc/game/01.jpg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/src/style.css"></head><body>${page}<script type="module" src="/src/main.js"></script></body></html>`);

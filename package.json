@@ -1,5 +1,5 @@
 {
-  "name": "test-landing",
+  "name": "mnist-digit-lab",
   "version": "0.0.0",
   "private": true,
   "type": "module",

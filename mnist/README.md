@@ -2,7 +2,7 @@
 
 Draw a digit with a mouse, touch screen, or stylus. Predictions update after each stroke; the Recognize button runs them again. Clear resets the canvas and prediction.
 
-From the repository root, run `npm run dev` and open the printed URL followed by `/mnist/`. `npm run build` creates the Next.js production build in `.next/`; `npm run start` serves both the homepage and `/mnist/`. Vercel is configured with the Next.js preset at the repository root. You can also serve the repository with `python -m http.server 8000` and visit `http://localhost:8000/mnist/`.
+From the repository root, run `npm run dev` and open the printed URL. MNIST is the homepage. `npm run build` creates the production build in `.next/`; `npm run start` serves it. Vercel uses the Next.js preset at the repository root. The old `/mnist/` page URL redirects to `/`.
 
 The original `../mnist_train.py` is unchanged. Its CNN was trained for five epochs using its original seed, split, optimizer, and learning rate. The checkpoint selected by validation accuracy reached **98.56% validation accuracy** and **98.54% test accuracy** on all 10,000 MNIST test images. Drawings outside the MNIST distribution can be misclassified, and softmax confidence is not a guarantee of correctness.
 

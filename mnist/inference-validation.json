@@ -1,0 +1,7 @@
+{
+  "samples": 100,
+  "predictionsMatchingPyTorch": 100,
+  "maxLogitError": 0.00000286102294921875,
+  "correct": 100,
+  "testAccuracy": 98.54
+}

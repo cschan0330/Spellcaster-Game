@@ -1,0 +1,41 @@
+[
+  {
+    "width": 320,
+    "noOverflow": true,
+    "modelReady": true,
+    "rows": 10,
+    "initialBlank": true,
+    "emptyGuard": true,
+    "drawPredicts": true,
+    "predictedDigit": "1",
+    "hasConfidence": true,
+    "previewHasInk": true,
+    "clearResets": true
+  },
+  {
+    "width": 768,
+    "noOverflow": true,
+    "modelReady": true,
+    "rows": 10,
+    "initialBlank": true,
+    "emptyGuard": true,
+    "drawPredicts": true,
+    "predictedDigit": "1",
+    "hasConfidence": true,
+    "previewHasInk": true,
+    "clearResets": true
+  },
+  {
+    "width": 1440,
+    "noOverflow": true,
+    "modelReady": true,
+    "rows": 10,
+    "initialBlank": true,
+    "emptyGuard": true,
+    "drawPredicts": true,
+    "predictedDigit": "1",
+    "hasConfidence": true,
+    "previewHasInk": true,
+    "clearResets": true
+  }
+]

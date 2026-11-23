@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "classOrder": [
+    "fire",
+    "water",
+    "earth",
+    "wind",
+    "lightning"
+  ],
+  "counterOf": {
+    "fire": "water",
+    "water": "lightning",
+    "lightning": "earth",
+    "earth": "wind",
+    "wind": "fire"
+  },
+  "startingHP": 100,
+  "healBetweenDuels": true,
+  "enemyAttacksFirst": true,
+  "baseDamage": 10,
+  "weaknessMultiplier": 2,
+  "previewSeconds": 1.2,
+  "victoryScore": {
+    "pointsPerLevel": 100,
+    "pointsPerRemainingHP": 2,
+    "pointsPerPerfectTurn": 10,
+    "perfectTurnBonusCap": 10
+  },
+  "levels": [
+    {
+      "level": 1,
+      "minScore": 0,
+      "comboLength": 1,
+      "secondsPerRune": 4,
+      "defenseError": 0.6,
+      "grammar": "single_basic",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 2,
+      "minScore": 100,
+      "comboLength": 1,
+      "secondsPerRune": 3.7,
+      "defenseError": 0.5,
+      "grammar": "single_all",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 3,
+      "minScore": 300,
+      "comboLength": 2,
+      "secondsPerRune": 3.4,
+      "defenseError": 0.42,
+      "grammar": "AA",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 4,
+      "minScore": 600,
+      "comboLength": 2,
+      "secondsPerRune": 3.1,
+      "defenseError": 0.35,
+      "grammar": "any",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 5,
+      "minScore": 1000,
+      "comboLength": 3,
+      "secondsPerRune": 2.8,
+      "defenseError": 0.28,
+      "grammar": "AAA_or_ABA",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 6,
+      "minScore": 1500,
+      "comboLength": 3,
+      "secondsPerRune": 2.5,
+      "defenseError": 0.22,
+      "grammar": "any",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 7,
+      "minScore": 2100,
+      "comboLength": 4,
+      "secondsPerRune": 2.2,
+      "defenseError": 0.17,
+      "grammar": "ABAB_or_AABB",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 8,
+      "minScore": 2800,
+      "comboLength": 4,
+      "secondsPerRune": 2,
+      "defenseError": 0.12,
+      "grammar": "any",
+      "weaknessRuneWeight": 1
+    },
+    {
+      "level": 9,
+      "minScore": 3600,
+      "comboLength": 5,
+      "secondsPerRune": 1.8,
+      "defenseError": 0.08,
+      "grammar": "any",
+      "weaknessRuneWeight": 2
+    },
+    {
+      "level": 10,
+      "minScore": 4500,
+      "comboLength": 5,
+      "secondsPerRune": 1.6,
+      "defenseError": 0.05,
+      "grammar": "any",
+      "weaknessRuneWeight": 3
+    }
+  ]
+}

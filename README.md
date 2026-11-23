@@ -1,18 +1,24 @@
-# MNIST Digit Lab
+# Spellcaster
 
-A Next.js application for handwritten digit recognition. Draw a number on the homepage to see the trained CNN's prediction, confidence, and probabilities for digits 0-9. Inference runs locally in the browser using weights trained by `mnist_train.py`.
+Spellcaster is a first-person wizard duel game where a trained CNN turns single-stroke drawings into Fire, Water, Earth, Wind, or Lightning spells. Draw the matching counter for each incoming spell, then cast attacks during your opening. Consecutive successful guards build Focused, increasing spell damage and brightening your wand. Ended runs are saved to a leaderboard on the current device.
 
-```sh
-npm ci
-npm run dev
+## Run locally
+
+```powershell
+npm.cmd ci
+npm.cmd run dev
 ```
 
-Open `http://localhost:3000/`. For production, run `npm run build`, then `npm run start`.
+Open the local URL printed by Next.js. Choose **How to play** to see the rune shapes and counter rules. Use the mouse to look, then press and hold to draw with the crosshair. On touch, draw with one finger. Release to cast.
 
-Vercel uses `vercel.json`. Set Root Directory to the repository root. The only application page is `/`; `/mnist/` redirects there. Model assets are served under `/mnist/`.
+- **F** toggles fullscreen or expanded view.
+- **R** recenters the view.
+- **Esc** pauses and releases the mouse. Use the pause menu to adjust mouse sensitivity.
 
-`components/DigitLab.jsx` renders the interface. `mnist/app.js` handles drawing and preprocessing; `mnist/network.js` implements CNN inference. The build copies model assets with `scripts/prepare-assets.mjs`.
+## How it works
 
-The model achieved **98.54% accuracy on all 10,000 MNIST test images**. Browser predictions matched PyTorch on 100 reference images. Hand-drawn digits can differ from MNIST; confidence does not guarantee correctness.
+- [Recognizer](lib/spellcaster-recognizer.js) converts a stroke to a 28 × 28 grayscale image. ONNX Runtime Web runs the [trained model](public/model/runes.onnx) in the browser and returns a rune and confidence score.
+- [Combat logic](lib/spellcaster-game.js) applies the prediction to the current attack or defense and handles damage, scoring, and progression.
+- [Duel scene](components/DuelScene.jsx) renders the low-poly arena, animated wizards, wand, and elemental effects with Three.js. An illustrated arena is available when WebGL is unavailable.
 
-After building, run `node mnist/browser-check.mjs` to verify homepage identity, removed legacy assets, drawing, inference, and clearing at mobile, tablet, and desktop widths. This Windows check requires Microsoft Edge and creates its own local production server. See [model documentation](mnist/README.md) for training and export instructions.
+See the [product requirements](PRD.md) and [model specification](MODEL_SPEC.md) for the game rules, dataset, and training results. Quick, Draw! samples are credited to Google, Inc. and contributors under CC BY 4.0.

@@ -81,7 +81,7 @@ Target the project's Vercel deployment for the finished site. Verify that the mo
 | Start and tutorial | Players can learn or skip rune paths and counters. Model load and warmup finish before timed play. Failures show a retry control. |
 | Drawing | A real single stroke produces a CNN classification in the correct slot. Taps, canceled strokes, and strokes incomplete at the deadline leave the slot empty. A late result from an old turn cannot affect the next one. |
 | Combat | All five counter mappings, mixed correct and incorrect slots, player and enemy damage values, weakness damage, and HP clamping match the current rules. Damage and score apply once even with repeated clicks or restart during transitions. |
-| Timing | Preview lasts 1.2 seconds before the full defense window. Deadline behavior, early Cast, hidden-tab pause, and explicit resume preserve turn boundaries. |
+| Timing | Incoming preview flights occur in order and finish before defense opens. A released stroke casts automatically. One counter resolves before the next input window. Deadline behavior, hidden-tab pause, and explicit resume preserve turn boundaries. |
 | Progression | Test every inclusive level threshold, the structured grammars, weakness weighting, player healing to 100 HP, enemy health rising from 3 to 20 HP by 4,500 points, and the cap of ten perfect-defense bonuses. |
 | Audio | Each elemental cast has a distinct cue. Damage and successful blocks have separate cues. Repeated renders and pause/resume do not replay cues for the same turn. Gameplay is usable without audio. |
 | Results | Defeat and quit-and-save each persist one run record. Refresh preserves the local leaderboard and its specified tie order. |
@@ -89,8 +89,5 @@ Target the project's Vercel deployment for the finished site. Verify that the mo
 
 ## References
 
-- [Spellcaster game design plan](Spellcaster_Design_Plan.md)
-- [Game handoff with rules, assets, and dataset report](Spellcaster_Game_Handoff.zip)
-- [Project guide, section 2.4](final-project-task1_2.pdf)
-- [Executed training notebook](model/Spellcaster_Rune_CNN.ipynb)
-- [QuickDraw campfire Fire dataset](model/campfire_flames_28x28.npz)
+- [Model specification](MODEL_SPEC.md)
+- [Combat rules](lib/spellcaster-rules.json)

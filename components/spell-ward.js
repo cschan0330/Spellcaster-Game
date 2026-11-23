@@ -25,11 +25,19 @@ export function createSpellWard() {
   }
   const wave = new T.Mesh(new T.RingGeometry(1.02, 1.10, 8, 1, Math.PI / 8), pulse);
   wave.position.z = .09;
-  group.add(disk, rings, wave);
+  const fragments = new T.Group();
+  const fragmentMaterial = veil.clone();
+  const shard = new T.CircleGeometry(.23, 3);
+  for (let index = 0; index < 12; index++) {
+    fragments.add(new T.Mesh(shard, fragmentMaterial));
+  }
+  group.add(disk, rings, wave, fragments);
 
   return {
     group,
     show(time, tint, reduced) {
+      fragments.visible = false;
+      disk.visible = rings.visible = true;
       group.visible = time >= .12 && time < 1.03;
       if (!group.visible) return;
       const rise = Math.min(1, (time - .12) / .22);
@@ -46,6 +54,23 @@ export function createSpellWard() {
       wave.scale.setScalar(reduced ? 1 : 1 + hit * .53);
       pulse.color.copy(sigil.color);
       pulse.opacity = .94 * (1 - hit);
+    },
+    shatter(time, tint, reduced) {
+      const duration = reduced ? .22 : .58;
+      if (time >= duration) return;
+      group.visible = fragments.visible = true;
+      disk.visible = rings.visible = wave.visible = false;
+      group.scale.setScalar(1);
+      const progress = time / duration;
+      const travel = reduced ? 0 : progress;
+      fragmentMaterial.color.set(tint ?? 0xffffff);
+      fragmentMaterial.opacity = 1 - progress;
+      fragments.children.forEach((fragment, index) => {
+        const angle = index * Math.PI / 6;
+        const radius = .78 + travel * (1.4 + .23 * (index % 3));
+        fragment.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius - travel ** 2 * .42, travel * .45);
+        fragment.rotation.set(travel * 4, travel * (index % 2 ? 5 : -5), angle + travel * 3);
+      });
     },
   };
 }

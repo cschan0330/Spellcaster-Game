@@ -2,13 +2,14 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AimCanvas from "../components/AimCanvas";
-import { advance, damageCue, elements, enemySequence, inputPhases, levelAt, openDuel, randomElement, rules } from "../lib/spellcaster-game";
+import { createDuelAudio, playDuelTransition } from "../lib/spellcaster-audio";
+import { advance, damageCue, elements, enemyCastDelay, enemyCastDuration, enemySequence, focusAt, inputPhases, levelAt, openDuel, playerCastDuration, randomElement, rules } from "../lib/spellcaster-game";
 import { loadRecognizer, modelVersion, rasterize } from "../lib/spellcaster-recognizer";
 
 const DuelScene = dynamic(() => import("../components/DuelScene"), { ssr: false });
 
 const titles = {
-  preview: "Incoming spell", defend: "Draw your counter", defenseResult: "Defense resolved",
+  preview: "Incoming spell", defend: "Draw your counter", defenseFlight: "Counter cast", defenseResult: "Defense resolved",
   attack: "Draw your attack", enemyDefense: "Opponent counters", attackResult: "Attack resolved",
   won: "Duel won", over: "Run over",
 };
@@ -26,8 +27,7 @@ function Rune({ element, named = false }) {
   </span>;
 }
 
-function HealthBar({ hp, owner }) {
-  const maximum = rules.startingHP;
+function HealthBar({ hp, owner, maximum = rules.startingHP }) {
   return <span className="health-pixels" data-low={hp / maximum <= .3} role="meter"
     aria-label={`${owner} health`} aria-valuemin={0} aria-valuemax={maximum} aria-valuenow={hp}>
     {Array.from({ length: 10 }, (_, index) => {
@@ -71,6 +71,7 @@ export default function Home() {
   const canvas = useRef(null);
   const portraitHost = useRef(null);
   const enemyRunes = useRef([]);
+  const audio = useRef(null);
   const lastRuneVariants = useRef(new Map());
   const view = useRef({ yaw: 0, pitch: 0, sensitivity: 1 });
   const onUnlock = useRef(() => send("pause"));
@@ -102,6 +103,8 @@ export default function Home() {
     prepare();
     return () => {
       mounted.current = false;
+      audio.current?.close();
+      audio.current = null;
       window.removeEventListener("keydown", fullscreenKey);
       document.removeEventListener("fullscreenchange", screenChanged);
     };
@@ -152,6 +155,7 @@ export default function Home() {
     }
     live.current = next;
     setGame(next);
+    playDuelTransition(audio.current, previous, next);
   }
 
   function send(type, target = live.current, payload = {}) {
@@ -184,11 +188,6 @@ export default function Home() {
       if (live.current?.paused) return;
       if (event.code === "KeyR") recenter();
       if (event.code === "KeyX") canvas.current?.clear();
-      if (event.code === "KeyZ") send("undo");
-      if (event.code === "Space" && (document.pointerLockElement || event.target === document.body) && live.current?.phase === "attack") {
-        event.preventDefault();
-        send("cast");
-      }
     }
     pulse();
     const timer = setInterval(pulse, 40);
@@ -217,6 +216,12 @@ export default function Home() {
   }, [game]);
 
   function begin(run) {
+    try {
+      audio.current ??= createDuelAudio();
+      audio.current?.resume();
+    } catch {
+      // Audio availability must not prevent a duel from starting.
+    }
     const time = now();
     setClock(time);
     setNotice("");
@@ -231,6 +236,7 @@ export default function Home() {
   }
   function resume() {
     if (live.current?.paused) {
+      audio.current?.resume();
       send("resume");
       canvas.current?.lock();
     }
@@ -263,14 +269,14 @@ export default function Home() {
     const turn = live.current;
     if (!turn || turn.pending || !send("release", turn)?.pending) return;
     try {
-      const pixels = rasterize(points);
-      if (!pixels) {
+      const stroke = rasterize(points);
+      if (!stroke) {
         send("prediction", turn, { message: "Draw a longer continuous stroke." });
         return;
       }
-      const { rune, score } = await predict.current(pixels);
+      const { rune, score } = await predict.current(stroke.pixels);
       const result = score >= 0.60
-        ? { rune, message: `Recognized ${label(rune)}.` }
+        ? { rune, drawing: stroke.drawing }
         : { message: "Rune unclear. Try again." };
       send("prediction", turn, result);
     } catch {
@@ -288,14 +294,15 @@ export default function Home() {
 
   const active = game && inputPhases.includes(game.phase) && !game.paused && clock < game.deadline;
   const canAim = Boolean(game && !game.paused && !["won", "over"].includes(game.phase));
-  const showIncoming = game && ["preview", "defend", "defenseResult"].includes(game.phase);
+  const defending = game && ["defend", "defenseFlight", "defenseResult"].includes(game.phase);
+  const incoming = defending ? game.incoming[game.slot] : null;
   const enemy = game?.enemy || "lightning";
-  const playerSpell = game?.phase === "enemyDefense" ? game.submitted.at(-1) : null;
-  const guard = game?.phase === "enemyDefense"
-    ? game.counters.find((counter, index) => counter === rules.counterOf[game.submitted[index]]) : null;
-  const defended = game?.phase === "defenseResult" || (game?.phase === "over" && game.playerHP === 0);
-  const playerGuard = defended ? game.submitted[game.hits.indexOf(0)] : null;
+  const playerSpell = ["enemyDefense", "defenseFlight"].includes(game?.phase) ? game.spell : null;
+  const guard = game?.phase === "enemyDefense" && game.counter === rules.counterOf[game.spell] ? game.counter : null;
+  const playerGuard = game?.phase === "defenseResult" && game.hits[0] === 0 ? game.spell : null;
   const impact = useMemo(() => damageCue(game), [game]);
+  const focus = focusAt(game?.guardStreak);
+  const shieldBroken = Boolean(game?.shieldBroken && ["attackResult", "won"].includes(game.phase));
   const playerAction = game?.phase === "over" && game.playerHP === 0 ? "elimination"
     : game?.phase === "defenseResult" && game.hits.some(Boolean) ? "damage"
     : playerSpell ? "cast"
@@ -316,19 +323,24 @@ export default function Home() {
       }}>
         <DuelScene element={enemy} player={game?.player} pose={pose} view={view}
           playerAction={playerAction} impact={impact} guard={guard} playerGuard={playerGuard}
+          focus={focus} shieldBroken={shieldBroken}
           turn={game?.turn} paused={Boolean(game?.paused)} portraitHost={portraitHost} />
         <img className={`enemy ${pose}`} src={sprite(enemy, pose)} alt={game ? `${label(enemy)} wizard` : ""} />
         <AimCanvas controls={canvas} canAim={canAim} enabled={Boolean(active)} locked={Boolean(game?.pending)}
           view={view} onUnlock={onUnlock} onRelease={recognize} />
+        {focus && <div key={focus.guards} className="focus-combo" style={{ color: focus.color }} role="status">
+          <span>Focused!</span>
+          <span>{game.guardStreak} guards</span>
+        </div>}
         {game && <div className="enemy-vitals">
           <Rune element={enemy} />
-          <HealthBar hp={game.enemyHP} owner="Enemy" />
+          <HealthBar hp={game.enemyHP} maximum={game.enemyMaxHP} owner="Enemy" />
         </div>}
-        {game?.phase === "preview" && <div key={game.turn} className="enemy-spells" aria-hidden="true">
-          {enemyRunes.current.map(({ element, variant }, index, spells) => <span key={index}
+        {game?.phase === "preview" && <div key={game.turn} className="enemy-spells" aria-hidden="true"
+          style={{ "--cast-duration": `${enemyCastDuration}s` }}>
+          {enemyRunes.current.map(({ element, variant }, index) => <span key={index}
             className={`enemy-spell ${element}`} style={{
-              "--cast-delay": `${.28 + index * .075}s`,
-              "--cast-spread": `${(index - (spells.length - 1) / 2) * 54}px`,
+              "--cast-delay": `${enemyCastDelay(index)}s`,
             }}>
             <span className="enemy-spell-glyph" style={{
               backgroundImage: `url(${runeStrip(element)})`,
@@ -337,9 +349,12 @@ export default function Home() {
             }} />
           </span>)}
         </div>}
-        {playerSpell && <div key={`cast-${game.turn}`} className="cast-flight" aria-hidden="true">
-          <span className={playerSpell} />
+        {playerSpell && <div key={`cast-${game.turn}`} className="cast-flight"
+          style={{ "--cast-duration": `${playerCastDuration}s` }} aria-hidden="true">
+          <img className={playerSpell} src={game.drawing} alt="" />
         </div>}
+        {game?.feedback && !["won", "over"].includes(game.phase) &&
+          <p className="cast-feedback" aria-hidden="true">{game.feedback}</p>}
         {["damage", "elimination"].includes(playerAction) &&
           <div key={`damage-${game.turn}`} className="player-hit" aria-hidden="true" />}
         {!game && (mode === "title" ? <>
@@ -356,7 +371,7 @@ export default function Home() {
             {mode === "tutorial" ? <>
               <h1>How to play</h1>
               <p>Move the mouse to look. Hold the primary button and trace a rune with the crosshair, then release. On touch, draw with one finger. Match incoming spells in order, or draw a rune to attack.</p>
-              <p>The counter list numbers incoming spells in order. Space casts early. Z undoes, X clears, and R recenters. Press Esc or select your portrait to pause.</p>
+              <p>Release each stroke to cast it. The counter list highlights the current incoming spell. X clears your stroke and R recenters. Press Esc or select your portrait to pause.</p>
               <div className="tutorial-runes">{elements.map((element) => <Rune key={element} element={element} named />)}</div>
             </> : <>
               <Leaderboard rows={rows} />
@@ -392,13 +407,11 @@ export default function Home() {
         </div>}
       {game && <section className="hud" aria-label="Duel HUD">
         <section className="counter-guide panel" aria-label="Counter spell list">
-          <ul>{elements.map((element) => {
-            const slots = showIncoming ? game.incoming.flatMap((spell, index) => spell === element ? [index + 1] : []) : [];
-            return <li key={element} className={slots.length ? "incoming-counter" : undefined}>
+          <ul>{elements.map((element) => (
+            <li key={element} className={element === incoming ? "incoming-counter" : undefined}>
               <Rune element={element} named /><span aria-label="countered by">&rarr;</span><Rune element={rules.counterOf[element]} named />
-              {slots.length > 0 && <span className="counter-order" aria-label={"Incoming slots " + slots.join(", ")}>{slots.join(" \u00b7 ")}</span>}
-            </li>;
-          })}</ul>
+            </li>
+          ))}</ul>
         </section>
         <div className="player-vitals">
           <button className="player-portrait" type="button" disabled={["won", "over"].includes(game.phase)}
@@ -414,7 +427,7 @@ export default function Home() {
           </div>
         </div>
         <p className="sr-only" role="status">
-          {titles[game.phase]}. {game.feedback} {showIncoming ? `Incoming: ${game.incoming.map(label).join(", ")}.` : ""}
+          {titles[game.phase]}. {game.feedback} {incoming ? `Incoming: ${label(incoming)}.` : ""}
         </p>
       </section>}
       </section>

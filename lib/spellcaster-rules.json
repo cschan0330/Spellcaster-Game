@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.2",
   "classOrder": [
     "fire",
     "water",
@@ -15,9 +15,23 @@
     "wind": "fire"
   },
   "startingHP": 100,
+  "enemyHealth": {
+    "startingHP": 3,
+    "maximumHP": 20,
+    "scoreAtMaximum": 4500
+  },
   "healBetweenDuels": true,
   "enemyAttacksFirst": true,
   "baseDamage": 10,
+  "playerSpellDamage": 1,
+  "focusTiers": [
+    { "guards": 2, "damage": 2, "color": "#ffffff", "glow": 1.5 },
+    { "guards": 3, "damage": 3, "color": "#ffe45c", "glow": 2.2 },
+    { "guards": 4, "damage": 4, "color": "#ff953d", "glow": 3 },
+    { "guards": 5, "damage": 5, "color": "#ff4848", "glow": 4 },
+    { "guards": 6, "damage": 6, "color": "#a4ff76", "glow": 5.4, "breaksShield": true },
+    { "guards": 7, "damage": 7, "color": "#5eb9ff", "glow": 7, "breaksShield": true }
+  ],
   "weaknessMultiplier": 2,
   "previewSeconds": 1.2,
   "victoryScore": {

@@ -32,12 +32,12 @@ function dispose(root) {
   materials.forEach((material) => material.dispose());
 }
 
-export default function DuelScene({ element, player, pose, view, playerAction, impact, guard, playerGuard, turn, paused, portraitHost }) {
+export default function DuelScene({ element, player, pose, view, playerAction, impact, guard, playerGuard, focus, shieldBroken, turn, paused, portraitHost }) {
   const host = useRef(null);
-  const current = useRef({ element, player, pose, playerAction, impact, guard, playerGuard, turn, paused });
+  const current = useRef({ element, player, pose, playerAction, impact, guard, playerGuard, focus, shieldBroken, turn, paused });
   useEffect(() => {
-    current.current = { element, player, pose, playerAction, impact, guard, playerGuard, turn, paused };
-  }, [element, player, pose, playerAction, impact, guard, playerGuard, turn, paused]);
+    current.current = { element, player, pose, playerAction, impact, guard, playerGuard, focus, shieldBroken, turn, paused };
+  }, [element, player, pose, playerAction, impact, guard, playerGuard, focus, shieldBroken, turn, paused]);
 
   useEffect(() => {
     const container = host.current;
@@ -75,7 +75,25 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
     const foreground = new T.Scene();
     const handCamera = new T.OrthographicCamera(-1, 1, 1, -1, .1, 10);
     handCamera.position.z = 3;
-    const { wand, jewel } = buildWand();
+    const { wand, jewel, tip } = buildWand();
+    const tipLight = new T.PointLight(0xffffff, 0, 1.25, 2);
+    tipLight.position.copy(tip.position);
+    tipLight.position.z += .12;
+    const haloCanvas = document.createElement("canvas");
+    haloCanvas.width = haloCanvas.height = 64;
+    const haloContext = haloCanvas.getContext("2d");
+    const gradient = haloContext.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, "rgba(255, 255, 255, .9)");
+    gradient.addColorStop(.35, "rgba(255, 255, 255, .45)");
+    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+    haloContext.fillStyle = gradient;
+    haloContext.fillRect(0, 0, 64, 64);
+    const haloTexture = new T.CanvasTexture(haloCanvas);
+    const halo = new T.Sprite(new T.SpriteMaterial({
+      map: haloTexture, transparent: true, depthWrite: false, toneMapped: false,
+    }));
+    halo.position.copy(tipLight.position);
+    tip.parent.add(tipLight, halo);
     const handMixer = new T.AnimationMixer(wand);
     const handActions = new Map(playerClips().map(clip => [clip.name, handMixer.clipAction(clip)]));
     wand.scale.setScalar(.76);
@@ -139,6 +157,8 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
     let lastGuardTurn;
     let guardTint;
     let wardAge = Infinity;
+    let lastShatterTurn;
+    let shatterAge = Infinity;
     let lastPlayerGuardTurn;
     let playerWardAge = Infinity;
     let previousYaw = 0;
@@ -155,7 +175,7 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
     }
     function draw(time) {
       frame = requestAnimationFrame(draw);
-      const { element, player, pose, playerAction, impact, guard, playerGuard, turn, paused } = current.current;
+      const { element, player, pose, playerAction, impact, guard, playerGuard, focus, shieldBroken, turn, paused } = current.current;
       const { yaw, pitch } = view.current;
       const delta = paused || previousTime === undefined ? 0 : Math.min(.25, (time - previousTime) / 1000);
       previousTime = time;
@@ -168,7 +188,16 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
         wardAge = Infinity;
       }
       wardAge += delta;
-      ward.show(wardAge, guardTint, reduced);
+      if (shieldBroken && turn !== lastShatterTurn) {
+        lastShatterTurn = turn;
+        shatterAge = 0;
+      } else if (!shieldBroken) {
+        lastShatterTurn = undefined;
+        shatterAge = Infinity;
+      }
+      shatterAge += delta;
+      ward.show(shieldBroken ? Infinity : wardAge, guardTint, reduced);
+      ward.shatter(shatterAge, focus?.color, reduced);
       const guardStatus = ward.group.visible ? "active" : "inactive";
       if (container.dataset.enemyGuard !== guardStatus) container.dataset.enemyGuard = guardStatus;
       if (playerGuard && turn !== lastPlayerGuardTurn) {
@@ -235,9 +264,17 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
         active.mixer.update(delta);
       }
       const tint = wandColors[player] ?? wandColors.lightning;
-      jewel.color.setHex(tint);
-      jewel.emissive.setHex(tint);
-      jewel.emissiveIntensity = casting ? 1.1 + 2.5 * Math.sin(Math.min(1, (wandAction?.time ?? 0) / .55) * Math.PI) : .75;
+      jewel.color.set(focus?.color ?? tint);
+      jewel.emissive.copy(jewel.color);
+      const castGlow = casting ? 2.5 * Math.sin(Math.min(1, (wandAction?.time ?? 0) / .55) * Math.PI) : 0;
+      const glow = focus?.glow ?? 0;
+      jewel.emissiveIntensity = .75 + glow * .23 + castGlow;
+      tipLight.color.copy(jewel.color);
+      tipLight.intensity = glow * .36;
+      halo.visible = glow > 0;
+      halo.material.color.copy(jewel.color);
+      halo.material.opacity = .22 + glow * .09;
+      halo.scale.setScalar(.25 + glow * .07);
       wand.rotation.z = reduced ? 0 : T.MathUtils.lerp(wand.rotation.z, (yaw - previousYaw) * 2.5, .24);
       wand.rotation.x = reduced ? 0 : T.MathUtils.lerp(wand.rotation.x, (pitch - previousPitch) * 2.5, .24);
       wand.position.y = T.MathUtils.lerp(wand.position.y, casting ? -.93 : -1.02, .18);
@@ -324,6 +361,8 @@ export default function DuelScene({ element, player, pose, view, playerAction, i
       for (const { mixer } of meshes.values()) mixer.stopAllAction();
       dispose(stage);
       dispose(foreground);
+      halo.material.dispose();
+      haloTexture.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
